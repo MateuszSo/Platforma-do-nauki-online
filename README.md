@@ -39,6 +39,17 @@ Instead, it will copy all the configuration files and the transitive dependencie
 
 You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
 
+In the /src directory, you can run:
+
+### `node server.js`
+
+Starts the backend server using Node.js.
+
+This script is located in the /src directory and is responsible for handling API requests and server-side logic for the application.
+Make sure to run npm install beforehand to install all required dependencies.
+
+The server will run on http://localhost:4000 unless configured otherwise.
+
 ## Learn More
 
 You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
