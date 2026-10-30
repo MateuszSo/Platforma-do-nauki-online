@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "${API_URL}";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 function Home({ user, setUser }) {
   const [showOptions, setShowOptions] = useState(false);
@@ -112,7 +112,7 @@ function Home({ user, setUser }) {
         };
 
         // Wysyłanie powiadomienia do serwera
-        await fetch("${API_URL}/notifications", {
+        await fetch(`${API_URL}/notifications`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -130,7 +130,7 @@ function Home({ user, setUser }) {
         };
 
         // Wysyłanie powiadomienia do serwera
-        await fetch("${API_URL}/notifications", {
+        await fetch(`${API_URL}/notifications`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -150,7 +150,7 @@ function Home({ user, setUser }) {
     const fetchAnnouncements = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("${API_URL}/announcements", {
+        const response = await fetch(`${API_URL}/announcements`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -236,10 +236,6 @@ function Home({ user, setUser }) {
 
   const [selectedTermIndex, setSelectedTermIndex] = useState(null);
 
-  const handleTermClick = (index) => {
-    setSelectedTermIndex(index);
-  };
-
   const toggleOptions = () => {
     setShowOptions((prev) => !prev);
   };
@@ -294,7 +290,7 @@ function Home({ user, setUser }) {
 
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch("${API_URL}/announcements", {
+      const response = await fetch(`${API_URL}/announcements`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -304,9 +300,8 @@ function Home({ user, setUser }) {
       });
 
       if (response.ok) {
-        const data = await response.json();
         const updatedAnnouncementsResponse = await fetch(
-          "${API_URL}/announcements",
+          `${API_URL}/announcements`,
           {
             headers: {
               ...(token ? { Authorization: `Bearer ${token}` } : {}),

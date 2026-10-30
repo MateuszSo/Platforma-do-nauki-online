@@ -1,6 +1,6 @@
 const express = require("express");
 const { MongoClient } = require("mongodb");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const path = require("path");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -11,6 +11,9 @@ dotenv.config();
 
 const app = express();
 app.use(express.json());
+// Netlify/AWS Lambda stoja za proxy - bez tego express-rate-limit zglasza blad
+// walidacji naglowka X-Forwarded-For, a req.ip zwraca adres proxy.
+app.set("trust proxy", 1);
 app.use(express.static(path.join(__dirname, "/../public"))); // Ścieżka do statycznych plików (public)
 
 const corsOptions = {
@@ -23,7 +26,21 @@ const corsOptions = {
 app.use(cors(corsOptions));
 
 // Limiter dla endpointów logowania (ochrona przed brute force)
+// W serverless (Lambda) nie ma gniazda TCP, wiec req.ip bywa undefined.
+// Adres klienta bierzemy z naglowkow ustawianych przez Netlify / proxy.
+function clientIp(req) {
+  const xff = (req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return (
+    req.headers["x-nf-client-connection-ip"] ||
+    xff ||
+    (req.socket && req.socket.remoteAddress) ||
+    "unknown"
+  );
+}
+
 const loginLimiter = rateLimit({
+  keyGenerator: clientIp,
+  validate: false,
   windowMs: 15 * 60 * 1000, // 15 minut
   limit: 20, // maksymalnie 20 prób logowania z jednego adresu IP na 15 minut
   message: { error: "Zbyt wiele prób logowania. Spróbuj ponownie później." },
@@ -31,6 +48,8 @@ const loginLimiter = rateLimit({
 
 // Limiter dla rejestracji (ograniczenie z tego IP)
 const registerLimiter = rateLimit({
+  keyGenerator: clientIp,
+  validate: false,
   windowMs: 60 * 60 * 1000, // 1 godzina
   limit: 5, // maksymalnie 5 rejestracji na godzinę z jednego adresu IP
   message: { error: "Zbyt wiele rejestracji z tego adresu IP." },
@@ -38,6 +57,8 @@ const registerLimiter = rateLimit({
 
 // Limiter dla zmiany hasła
 const changePasswordLimiter = rateLimit({
+  keyGenerator: clientIp,
+  validate: false,
   windowMs: 60 * 60 * 1000, // 1 godzina
   limit: 5, // maksymalnie 5 prób zmiany hasła na godzinę z jednego adresu IP
   message: { error: "Zbyt wiele prób zmiany hasła. Spróbuj później." },
@@ -78,14 +99,19 @@ const announcementsCollectionName = "announcements";
 const notificationsCollectionName = "notifications";
 const reservationsCollectionName = "reservations";
 const reviewsCollectionName = "reviews";
-const port = 4000;
+const port = process.env.PORT || 4000;
 
 let db = null;
 
 // Funkcja do połączenia z bazą danych (po pierwszym połączeniu trzymamy połączenie jako singleton)
 async function connectToDb() {
   if (!db) {
-    const client = new MongoClient(uri);
+    const client = new MongoClient(uri, {
+      // W serverless (Netlify Functions) wiele instancji = wiele połączeń.
+      // Trzymamy małą pulę, żeby nie wyczerpać limitu połączeń w MongoDB Atlas.
+      maxPoolSize: 5,
+      serverSelectionTimeoutMS: 10000,
+    });
     await client.connect();
     db = client.db(dbName);
     console.log("Połączono z bazą danych");
@@ -914,7 +940,13 @@ app.post("/reviews/:teacherId", async (req, res) => {
   }
 });
 
-// Uruchomienie serwera
-app.listen(port, () => {
-  console.log(`Serwer działa na porcie ${port}`);
-});
+
+// Uruchomienie serwera (tylko lokalnie / na hostingu typu VPS).
+// Na Netlify Functions app jest eksportowany i wywolywany przez serverless-http.
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Serwer działa na porcie ${port}`);
+  });
+}
+
+module.exports = app;

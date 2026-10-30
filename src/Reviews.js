@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import "./Reviews.css"; // Importowanie pliku CSS
 
-const API_URL = process.env.REACT_APP_API_URL || "${API_URL}";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 const Reviews = () => {
   const { teacherId } = useParams();

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./reservations.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "${API_URL}";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 function Reservations({ user, setUser }) {
   const navigate = useNavigate();
@@ -101,7 +101,7 @@ function Reservations({ user, setUser }) {
         };
 
         // Wysyłanie powiadomienia do serwera
-        await fetch("${API_URL}/notifications", {
+        await fetch(`${API_URL}/notifications`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -154,7 +154,7 @@ function Reservations({ user, setUser }) {
         };
 
         // Wysyłanie powiadomienia do serwera
-        await fetch("${API_URL}/notifications", {
+        await fetch(`${API_URL}/notifications`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

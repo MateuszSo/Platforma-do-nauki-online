@@ -102,3 +102,44 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+
+## Wdrożenie na Netlify (frontend + backend jako Netlify Functions)
+
+Cały projekt działa na Netlify: frontend (Create React App) jako statyczna strona,
+a backend (`src/server.js`, Express) jako funkcja serverless `netlify/functions/api.js`.
+
+### Zmienne środowiskowe (Netlify -> Site configuration -> Environment variables)
+
+| Zmienna | Wartość |
+| --- | --- |
+| `REACT_APP_API_URL` | `<api_url>` |
+| `MONGODB_URI` | connection string z MongoDB Atlas |
+| `DB_NAME` | `<dbName>` |
+| `JWT_SECRET` | długi, losowy sekret |
+| `CORS_ORIGIN` | `https://twoja-nazwa.netlify.app` |
+
+`REACT_APP_API_URL` jest wbudowywana w bundle **w trakcie builda**, więc po każdej
+zmianie uruchom ponownie deploy z opcją *Clear cache and deploy site*.
+
+### Jak to jest spięte
+
+- `netlify.toml`: `/api/*` -> `/.netlify/functions/api/:splat`
+- wszystkie pozostałe ścieżki -> `/index.html` (SPA + BrowserRouter)
+- `netlify/functions/api.js` opakowuje aplikację Express przez `serverless-http`
+  i normalizuje ścieżkę (obsługuje zarówno `/api/x`, jak i `/.netlify/functions/api/x`)
+
+### Uruchomienie lokalne
+
+- klasycznie: `npm start` (frontend, port 3000) + `npm run server` (API, port 4000)
+  i w `.env` ustaw `REACT_APP_API_URL=http://localhost:4000`
+- albo przez Netlify CLI: `npm i -g netlify-cli`, potem `npm run dev`
+  (`netlify dev` uruchamia CRA + funkcję pod `/api`)
+
+### Ograniczenia wynikające z serverless
+
+- `express-rate-limit` trzyma licznik w pamięci instancji funkcji, więc limity są
+  "miękkie" (kilka instancji = kilka niezależnych liczników).
+- Funkcja ma limit czasu (domyślnie 10 s), a pierwsze żądanie po dłuższej przerwie
+  może trwać dłużej (zimny start + łączenie z Atlas).
+- Połączenie z MongoDB jest cache'owane w obrębie instancji; pula ograniczona do 5.

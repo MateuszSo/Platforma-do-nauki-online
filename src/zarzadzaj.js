@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Zarzadzaj.css";
 
-const API_URL = process.env.REACT_APP_API_URL || "${API_URL}";
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 function Zarzadzaj({ user, setUser }) {
   const navigate = useNavigate();
@@ -35,7 +35,7 @@ function Zarzadzaj({ user, setUser }) {
       if (newPassword === confPassword) {
         try {
           const token = localStorage.getItem("token");
-          const response = await fetch("${API_URL}/changePassword", {
+          const response = await fetch(`${API_URL}/changePassword`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

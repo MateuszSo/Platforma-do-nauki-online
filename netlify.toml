@@ -1,0 +1,30 @@
+[build]
+  command = "npm run build"
+  publish = "build"
+
+[build.environment]
+  # CRA 5 / react-scripts działa stabilnie na Node 20
+  NODE_VERSION = "20"
+  # REACT_APP_API_URL ustaw w panelu Netlify na wartość: /api
+  # (Site configuration -> Environment variables) - jest wbudowywana w build
+
+[functions]
+  directory = "netlify/functions"
+  # Uwaga: NIE ustawiaj tu node_version jako stringa - Netlify oczekuje tu
+  # obiektu (m.in. external_node_modules) i build pada z "Invalid syntax".
+  # Wersję Node dla funkcji wybiera się w panelu:
+  # Site configuration -> Build & deploy -> Functions -> Runtime
+  # (albo zmienną AWS_LAMBDA_JS_RUNTIME, np. "nodejs20.x").
+
+# 1) API -> Netlify Function (musi być PRZED przekierowaniem SPA)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# 2) SPA: React Router (BrowserRouter) wymaga przekierowania wszystkich
+#    pozostałych ścieżek na index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
