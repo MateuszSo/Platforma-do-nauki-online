@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Chat.css";
 
+const API_URL = process.env.REACT_APP_API_URL || "${API_URL}";
+
 function Chat({ user }) {
   const navigate = useNavigate();
   const [teacher, setTeacher] = useState(null);
@@ -17,9 +19,15 @@ function Chat({ user }) {
 
     const fetchData = async () => {
       try {
+        const token = localStorage.getItem("token");
         if (user.role === "student") {
           const teacherResponse = await fetch(
-            `http://localhost:4000/chat/teacher?email=${user.email}`
+            `${API_URL}/chat/teacher?email=${user.email}`,
+            {
+              headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+            }
           );
           if (teacherResponse.ok) {
             const data = await teacherResponse.json();
@@ -40,7 +48,12 @@ function Chat({ user }) {
           }
         } else if (user.role === "teacher") {
           const studentResponse = await fetch(
-            `http://localhost:4000/chat/students?teacherEmail=${user.email}`
+            `${API_URL}/chat/students?teacherEmail=${user.email}`,
+            {
+              headers: {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+            }
           );
           if (studentResponse.ok) {
             const data = await studentResponse.json();
@@ -71,14 +84,19 @@ function Chat({ user }) {
         let endpoint;
 
         if (user.role === "student" && teacher) {
-          endpoint = `http://localhost:4000/chat/messages?teacherEmail=${teacher.email}&userEmail=${user.email}`;
+          endpoint = `${API_URL}/chat/messages?teacherEmail=${teacher.email}&userEmail=${user.email}`;
         } else if (user.role === "teacher" && currentStudent) {
-          endpoint = `http://localhost:4000/chat/messages?teacherEmail=${user.email}&userEmail=${currentStudent.email}`;
+          endpoint = `${API_URL}/chat/messages?teacherEmail=${user.email}&userEmail=${currentStudent.email}`;
         } else {
           return;
         }
 
-        const response = await fetch(endpoint);
+        const token = localStorage.getItem("token");
+        const response = await fetch(endpoint, {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
         if (response.ok) {
           const data = await response.json();
           setMessages(data.messages);
@@ -107,9 +125,13 @@ function Chat({ user }) {
     }
 
     try {
-      const response = await fetch(`http://localhost:4000/chat/send`, {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/chat/send`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           senderEmail: user.email,
           receiverEmail: receiverEmail,
@@ -131,10 +153,11 @@ function Chat({ user }) {
         };
 
         // Wysyłanie powiadomienia do serwera
-        await fetch("http://localhost:4000/notifications", {
+        await fetch("${API_URL}/notifications", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(newNotification),
         });

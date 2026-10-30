@@ -7,7 +7,7 @@ function Login({ setUser }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const apiUrl = 'http://localhost:4000';
+  const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,6 +36,7 @@ function Login({ setUser }) {
           };
           setUser(userData);                             // Przechowuj email w stanie App.js
           localStorage.setItem("user", JSON.stringify(userData)); // Zapisz dane użytkownika
+          localStorage.setItem("token", data.token);   // Zapisz token JWT
           navigate("/home"); // Przekierowanie na stronę główną
         } else {
           setError(data.error || "Logowanie nie powiodło się.");

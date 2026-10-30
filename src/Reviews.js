@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import "./Reviews.css"; // Importowanie pliku CSS
 
+const API_URL = process.env.REACT_APP_API_URL || "${API_URL}";
+
 const Reviews = () => {
   const { teacherId } = useParams();
   const location = useLocation();
@@ -13,8 +15,14 @@ const Reviews = () => {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
+        const token = localStorage.getItem("token");
         const response = await fetch(
-          `http://localhost:4000/reviews/${teacherId}`
+          `${API_URL}/reviews/${teacherId}`,
+          {
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          }
         );
         if (response.ok) {
           const data = await response.json();
@@ -34,12 +42,14 @@ const Reviews = () => {
     if (!newReview) return;
 
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:4000/reviews/${teacherId}`,
+        `${API_URL}/reviews/${teacherId}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({
             review: newReview,

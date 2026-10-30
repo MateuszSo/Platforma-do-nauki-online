@@ -2,6 +2,29 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Konfiguracja środowiska (zmienne .env)
+
+Projekt korzysta ze zmiennych środowiskowych przechowywanych w pliku `.env` (lokalnie, **nie commitowanym** do gita).
+
+- **`.env.example`** – szablona pliku z przykładowymi wartościami, commitowana do repozytorium. Używaj jako punktu startu.
+- **`.env`** – lokalny plik z prawdziwymi wartościami (np. `MONGODB_URI`, `DB_NAME`). Jest ignorowany przez git.
+
+Aby uruchomić projekt lokalnie:
+
+1. `npm install`
+2. Skopiuj `.env.example` do `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+3. Uzupełnij w pliku `.env` prawdziwe dane dostępowe (m.in. `MONGODB_URI` i `DB_NAME`).
+
+Plik `.env` **musi** być dodany do `.gitignore` i nie powinien być nigdy commitowany do repozytorium. Wszystkie dane dostępowe (adres bazy, hasło) powinny znajdować się tylko w tym pliku.
+
+Dodatkowe zmienne w `.env`:
+- `JWT_SECRET` – klucz do podpisu tokenów JWT.
+- `CORS_ORIGIN` – adres aplikacji frontend (domyślnie `http://localhost:3000`).
+- `REACT_APP_API_URL` – adres backendu (domyślnie `http://localhost:4000`).
+
 ## Available Scripts
 
 In the project directory, you can run:

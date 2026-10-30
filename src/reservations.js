@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./reservations.css";
 
+const API_URL = process.env.REACT_APP_API_URL || "${API_URL}";
+
 function Reservations({ user, setUser }) {
   const navigate = useNavigate();
   const [role] = useState(user?.role || "");
@@ -18,12 +20,14 @@ function Reservations({ user, setUser }) {
       try {
         if (role === "teacher") {
           const teacherEmail = user?.email;
+          const token = localStorage.getItem("token");
           const response = await fetch(
-            `http://localhost:4000/reservations/teacher/${teacherEmail}`,
+            `${API_URL}/reservations/teacher/${teacherEmail}`,
             {
               method: "GET",
               headers: {
                 "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
               },
             }
           );
@@ -37,12 +41,14 @@ function Reservations({ user, setUser }) {
           }
         } else {
           const userEmail = user?.email;
+          const token = localStorage.getItem("token");
           const response = await fetch(
-            `http://localhost:4000/reservations/user/${userEmail}`,
+            `${API_URL}/reservations/user/${userEmail}`,
             {
               method: "GET",
               headers: {
                 "Content-Type": "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
               },
             }
           );
@@ -68,12 +74,14 @@ function Reservations({ user, setUser }) {
   // akceptacja rezerwacji
   const handleAcceptReservation = async (reservationId) => {
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:4000/reservation/accept/${reservationId}`,
+        `${API_URL}/reservation/accept/${reservationId}`,
         {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         }
       );
@@ -93,10 +101,11 @@ function Reservations({ user, setUser }) {
         };
 
         // Wysyłanie powiadomienia do serwera
-        await fetch("http://localhost:4000/notifications", {
+        await fetch("${API_URL}/notifications", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(newNotification),
         });
@@ -112,12 +121,14 @@ function Reservations({ user, setUser }) {
   // odrzucanie/usuwanie rezerwacji
   const handleDeclineReservation = async (reservationId) => {
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:4000/reservation/decline/${reservationId}`,
+        `${API_URL}/reservation/decline/${reservationId}`,
         {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         }
       );
@@ -143,10 +154,11 @@ function Reservations({ user, setUser }) {
         };
 
         // Wysyłanie powiadomienia do serwera
-        await fetch("http://localhost:4000/notifications", {
+        await fetch("${API_URL}/notifications", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(newNotification),
         });

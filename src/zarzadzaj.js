@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Zarzadzaj.css";
 
+const API_URL = process.env.REACT_APP_API_URL || "${API_URL}";
+
 function Zarzadzaj({ user, setUser }) {
   const navigate = useNavigate();
   const [activeForm, setActiveForm] = useState("dane"); // Ustawienie domyślnego formularza na "dane"
@@ -32,10 +34,12 @@ function Zarzadzaj({ user, setUser }) {
       // Wymagania złożoności hasła
       if (newPassword === confPassword) {
         try {
-          const response = await fetch("http://localhost:4000/changePassword", {
+          const token = localStorage.getItem("token");
+          const response = await fetch("${API_URL}/changePassword", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
             body: JSON.stringify({
               email,
@@ -73,10 +77,12 @@ function Zarzadzaj({ user, setUser }) {
     }
 
     try {
-      const response = await fetch(`http://localhost:4000/updateUser`, {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/updateUser`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ email, firstName, lastName, role }),
       });

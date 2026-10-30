@@ -11,7 +11,7 @@ function Register({ setUser }) {
   const [role, setRole] = useState(""); // Nowe pole roli
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const apiUrl = "http://localhost:4000";
+  const apiUrl = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
   const handleRegister = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s\d@]+$/;
@@ -51,6 +51,7 @@ function Register({ setUser }) {
             lastName: data.user.lastName,
             role: data.user.role,
           });
+          localStorage.setItem("token", data.token); // Zapisz token JWT otrzymany przy rejestracji
           navigate("/home");
         } else {
           setError(data.error || "Rejestracja nie powiodła się.");

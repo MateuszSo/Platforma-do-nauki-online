@@ -2,15 +2,19 @@ const express = require("express");
 const { MongoClient } = require("mongodb");
 const bcrypt = require("bcrypt");
 const path = require("path");
-const { error } = require("console");
+const dotenv = require("dotenv");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const rateLimit = require("express-rate-limit");
+
+dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "/../projekt"))); // Ścieżka do statycznych plików
+app.use(express.static(path.join(__dirname, "/../public"))); // Ścieżka do statycznych plików (public)
 
 const corsOptions = {
-  origin: "http://localhost:3000", // Zmień na URL swojej aplikacji front-end
+  origin: process.env.CORS_ORIGIN || "http://localhost:3000", // URL aplikacji front-end (np. w produkcji)
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true, // Czy zezwalać na przesyłanie ciasteczek
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -18,9 +22,57 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-const uri =
-  "mongodb+srv://tomekczyz001:PSKFTfk8sYUWYBva@cluster0.b98di.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0/";
-const dbName = "userAuthDB";
+// Limiter dla endpointów logowania (ochrona przed brute force)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minut
+  limit: 20, // maksymalnie 20 prób logowania z jednego adresu IP na 15 minut
+  message: { error: "Zbyt wiele prób logowania. Spróbuj ponownie później." },
+});
+
+// Limiter dla rejestracji (ograniczenie z tego IP)
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 godzina
+  limit: 5, // maksymalnie 5 rejestracji na godzinę z jednego adresu IP
+  message: { error: "Zbyt wiele rejestracji z tego adresu IP." },
+});
+
+// Limiter dla zmiany hasła
+const changePasswordLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 godzina
+  limit: 5, // maksymalnie 5 prób zmiany hasła na godzinę z jednego adresu IP
+  message: { error: "Zbyt wiele prób zmiany hasła. Spróbuj później." },
+});
+
+// Middleware autoryzacji JWT – wymaga nagłówka: Authorization: Bearer <token>
+function authenticate(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Brak autoryzacji." });
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Nieprawidłowy lub wygasły token." });
+  }
+}
+
+// Ścieżki z danymi użytkowników / prywatnymi danymi – wymagają tokenu JWT
+app.use("/announcements", authenticate);
+app.use("/notifications", authenticate);
+app.use("/reservations", authenticate);
+app.use("/reviews", authenticate);
+app.use("/chat", authenticate);
+app.use("/reservation", authenticate);
+app.use("/teachers", authenticate);
+app.use("/changePassword", authenticate);
+app.use("/updateUser", authenticate);
+
+const uri = process.env.MONGODB_URI;
+const dbName = process.env.DB_NAME;
+const JWT_SECRET = process.env.JWT_SECRET || "dev_secret_change_me";
 const collectionName = "users";
 const announcementsCollectionName = "announcements";
 const notificationsCollectionName = "notifications";
@@ -28,27 +80,26 @@ const reservationsCollectionName = "reservations";
 const reviewsCollectionName = "reviews";
 const port = 4000;
 
-// Funkcja do połączenia z bazą danych
+let db = null;
+
+// Funkcja do połączenia z bazą danych (po pierwszym połączeniu trzymamy połączenie jako singleton)
 async function connectToDb() {
-  const client = new MongoClient(uri);
-  try {
+  if (!db) {
+    const client = new MongoClient(uri);
     await client.connect();
+    db = client.db(dbName);
     console.log("Połączono z bazą danych");
-    return client.db(dbName);
-  } catch (err) {
-    console.error("Błąd połączenia z bazą danych:", err);
   }
+  return db;
 }
 
 // Endpoint do rejestracji
-app.post("/register", cors(corsOptions), async (req, res) => {
+app.post("/register", cors(corsOptions), registerLimiter, async (req, res) => {
   const { email, password, confirmPassword, firstName, lastName, role } =
     req.body;
 
   console.log("Rejestracja:", {
     email,
-    password,
-    confirmPassword,
     firstName,
     lastName,
     role,
@@ -94,9 +145,17 @@ app.post("/register", cors(corsOptions), async (req, res) => {
     await usersCollection.insertOne(newUser);
     console.log("Użytkownik zarejestrowany:", newUser);
 
+    // Generowanie tokenu JWT po rejestracji
+    const token = jwt.sign(
+      { email, role },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     // Zwróć dane użytkownika
     res.status(201).json({
       message: "Użytkownik zarejestrowany pomyślnie.",
+      token,
       user: {
         email: email,
         firstName: firstName,
@@ -111,7 +170,7 @@ app.post("/register", cors(corsOptions), async (req, res) => {
 });
 
 // Endpoint do logowania
-app.post("/login", cors(corsOptions), async (req, res) => {
+app.post("/login", cors(corsOptions), loginLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -132,9 +191,16 @@ app.post("/login", cors(corsOptions), async (req, res) => {
       return res.status(401).json({ error: "Nieprawidłowe hasło." });
     }
 
-    // Zwróć dane użytkownika
+    // Zwróć dane użytkownika wraz z tokenem JWT
+    const token = jwt.sign(
+      { email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     res.status(200).json({
       message: "Użytkownik zalogowany pomyślnie.",
+      token,
       user: {
         email: user.email,
         firstName: user.firstName,
@@ -149,7 +215,7 @@ app.post("/login", cors(corsOptions), async (req, res) => {
 });
 
 // Endpoint do zmiany hasła
-app.post("/changePassword", async (req, res) => {
+app.post("/changePassword", changePasswordLimiter, async (req, res) => {
   const { email, password, newPassword, confPassword } = req.body;
 
   // Sprawdzenie czy email został pomyślnie przesłany

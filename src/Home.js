@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Home.css";
 
+const API_URL = process.env.REACT_APP_API_URL || "${API_URL}";
+
 function Home({ user, setUser }) {
   const [showOptions, setShowOptions] = useState(false);
   const [announcements, setAnnouncements] = useState([]);
@@ -72,12 +74,14 @@ function Home({ user, setUser }) {
     const email = user?.email;
 
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:4000/announcements/${announcementId}/reserve`,
+        `${API_URL}/announcements/${announcementId}/reserve`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({ termIndex, email }),
         }
@@ -108,10 +112,11 @@ function Home({ user, setUser }) {
         };
 
         // Wysyłanie powiadomienia do serwera
-        await fetch("http://localhost:4000/notifications", {
+        await fetch("${API_URL}/notifications", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(newNotification),
         });
@@ -125,10 +130,11 @@ function Home({ user, setUser }) {
         };
 
         // Wysyłanie powiadomienia do serwera
-        await fetch("http://localhost:4000/notifications", {
+        await fetch("${API_URL}/notifications", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify(newNotificationteacher),
         });
@@ -143,10 +149,12 @@ function Home({ user, setUser }) {
   useEffect(() => {
     const fetchAnnouncements = async () => {
       try {
-        const response = await fetch("http://localhost:4000/announcements", {
+        const token = localStorage.getItem("token");
+        const response = await fetch("${API_URL}/announcements", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         });
         if (response.ok) {
@@ -167,13 +175,15 @@ function Home({ user, setUser }) {
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
+        const token = localStorage.getItem("token");
         const userEmail = user?.email;
         const response = await fetch(
-          `http://localhost:4000/notifications/user/${userEmail}`,
+          `${API_URL}/notifications/user/${userEmail}`,
           {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
           }
         );
@@ -197,12 +207,14 @@ function Home({ user, setUser }) {
   // usuwanie powiadomienia
   const deleteNotification = async (notificationId) => {
     try {
+      const token = localStorage.getItem("token");
       const response = await fetch(
-        `http://localhost:4000/notifications/delete/${notificationId}`,
+        `${API_URL}/notifications/delete/${notificationId}`,
         {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         }
       );
@@ -243,6 +255,7 @@ function Home({ user, setUser }) {
   const handleLogout = () => {
     setUser(null);
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     navigate("/");
   };
   const showDetails = (announcement) => {
@@ -280,10 +293,12 @@ function Home({ user, setUser }) {
     e.preventDefault();
 
     try {
-      const response = await fetch("http://localhost:4000/announcements", {
+      const token = localStorage.getItem("token");
+      const response = await fetch("${API_URL}/announcements", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(newAnnouncement),
       });
@@ -291,7 +306,12 @@ function Home({ user, setUser }) {
       if (response.ok) {
         const data = await response.json();
         const updatedAnnouncementsResponse = await fetch(
-          "http://localhost:4000/announcements"
+          "${API_URL}/announcements",
+          {
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          }
         );
         if (updatedAnnouncementsResponse.ok) {
           const updatedData = await updatedAnnouncementsResponse.json();
